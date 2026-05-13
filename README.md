@@ -84,40 +84,40 @@ Without the key the chat FAB greys out; the rest of the app works normally.
 ```mermaid
 flowchart LR
   subgraph Browser
-    UI[Dashboard pages<br/>Jinja2 + HTMX + Tailwind]
-    CHAT[Chat widget<br/>per-page floating panel]
+    UI["Dashboard pages (Jinja2 + HTMX + Tailwind)"]
+    CHAT["Chat widget (per-page floating panel)"]
   end
 
   subgraph FastAPI["FastAPI application"]
     direction TB
-    R1[/api/ingest/]
-    R2[/api/ingestions/]
-    R3[/api/detect/]
-    R4[/api/findings/]
-    R5[/api/resources/]
-    R6[/api/released/]
-    R7[/api/rules/]
-    R8[/api/export/]
-    R9[/api/chat/]
+    R1["/api/ingest"]
+    R2["/api/ingestions"]
+    R3["/api/detect"]
+    R4["/api/findings"]
+    R5["/api/resources"]
+    R6["/api/released"]
+    R7["/api/rules"]
+    R8["/api/export"]
+    R9["/api/chat"]
   end
 
   subgraph Engine["Engine modules"]
     direction TB
-    PARSE[Parsers<br/>aws.py, azure.py]
-    INFER[Inference<br/>billing → inventory]
-    DET[9 detectors<br/>RuleSpec-tagged]
-    REM[CLI generators<br/>aws_cli.py, azure_cli.py]
-    AI[Claude tool runner<br/>5 read-only tools]
+    PARSE["Parsers (aws.py, azure.py)"]
+    INFER["Inference (billing to inventory)"]
+    DET["9 detectors (RuleSpec-tagged)"]
+    REM["CLI generators (aws_cli.py, azure_cli.py)"]
+    AI["Claude tool runner (5 read-only tools)"]
   end
 
-  DB[(SQLite<br/>6 tables)]
+  DB[("SQLite (6 tables)")]
 
   UI --> FastAPI
   CHAT --> R9
   R9 --> AI
-  AI -.calls.-> R4
-  AI -.calls.-> R5
-  AI -.calls.-> R7
+  AI -. calls .-> R4
+  AI -. calls .-> R5
+  AI -. calls .-> R7
 
   R1 --> PARSE
   PARSE --> INFER
@@ -127,7 +127,7 @@ flowchart LR
   DET --> DB
   REM --> DB
 
-  FastAPI <-.read/write.-> DB
+  FastAPI -. read and write .-> DB
 ```
 
 The dashboard is plain server-rendered Jinja2 with a sprinkle of HTMX for
@@ -141,35 +141,35 @@ sequenceDiagram
   participant U as Operator
   participant API as FastAPI handler
   participant BG as BackgroundTasks
-  participant P as Parser + loader
+  participant P as Parser
   participant I as Inference
   participant D as Detectors
   participant DB as SQLite
 
-  U->>API: POST /api/ingest/billing (multipart file)
-  API->>API: Stream upload to temp file<br/>(shutil.copyfileobj, 64 KiB chunks)
-  API->>DB: INSERT Ingestion(processing_state=queued)
-  API-->>U: 200 { id, processing_state: "queued" }
+  U->>API: POST /api/ingest/billing with a multipart file
+  API->>API: Stream upload to a temp file in 64 KiB chunks
+  API->>DB: Insert Ingestion row with state queued
+  API-->>U: 200 OK with the new ingestion id and state queued
 
-  Note over BG: After HTTP response is sent
-  BG->>P: Parse CSV / JSON
-  P->>DB: INSERT BillingRecord rows
+  Note over BG: Runs after the HTTP response is sent
+  BG->>P: Parse CSV or JSON
+  P->>DB: Insert BillingRecord rows
   BG->>I: Infer Resources from billing
-  I->>DB: UPSERT Resource(is_inferred=true)
-  BG->>D: run_all(ingestion_id=...)
-  D->>DB: Read Resource + BillingRecord
-  D->>DB: INSERT Finding rows
-  BG->>DB: UPDATE Ingestion(processing_state=done)
+  I->>DB: Upsert Resource with is_inferred true
+  BG->>D: Call run_all
+  D->>DB: Read Resource and BillingRecord
+  D->>DB: Insert Finding rows
+  BG->>DB: Update Ingestion state to done
 
   U->>API: GET /api/ingestions/{id}
-  API-->>U: 200 { processing_state: "done", warnings, latest_detection_run }
+  API-->>U: 200 OK with state done, warnings, and the detection run
 
-  Note over U,DB: After review, operator releases a finding
+  Note over U,DB: After review, the operator releases a finding
   U->>API: POST /api/findings/{id}/release
-  API->>DB: INSERT ReleasedResource, DELETE Finding
-  API-->>U: 200 { monthly_cost_saved }
+  API->>DB: Insert ReleasedResource and delete Finding
+  API-->>U: 200 OK with the monthly cost saved
 
-  Note over U,DB: Next ingest re-runs detectors; released pairs are suppressed
+  Note over U,DB: The next ingest re-runs detectors and suppresses released pairs
 ```
 
 ### Data model
@@ -177,7 +177,7 @@ sequenceDiagram
 ```mermaid
 erDiagram
   INGESTION ||--o{ BILLING_RECORD : "produces"
-  INGESTION ||--o{ RESOURCE : "produces (inferred or explicit)"
+  INGESTION ||--o{ RESOURCE : "produces inferred or explicit"
   INGESTION ||--o{ DETECTION_RUN : "triggers"
   DETECTION_RUN ||--o{ FINDING : "produces"
   RESOURCE ||--o{ FINDING : "flagged by"
@@ -187,9 +187,9 @@ erDiagram
   INGESTION {
     int id PK
     string filename
-    string kind "billing | inventory"
-    string status "success | partial | failed"
-    string processing_state "queued | processing | done"
+    string kind "billing or inventory"
+    string status "success partial or failed"
+    string processing_state "queued processing or done"
     int rows_total
     int rows_ingested
     int rows_skipped
@@ -199,12 +199,12 @@ erDiagram
   RESOURCE {
     int id PK
     string resource_id UK "globally unique"
-    string provider "aws | azure"
+    string provider "aws or azure"
     string resource_type
     string region
-    string account_id "AWS UsageAccountId / Azure SubId"
+    string account_id "AWS UsageAccountId or Azure SubId"
     string state
-    bool is_inferred "true = built from billing"
+    bool is_inferred "true means built from billing"
     datetime first_seen_at
     datetime last_seen_at
     float cpu_avg_7d
