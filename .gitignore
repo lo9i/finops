@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+.DS_Store
+# uv.lock IS committed (this is an application, not a library) — pin transitive
+# deps for reproducible installs.

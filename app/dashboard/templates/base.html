@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Cloud Cost Optimizer{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+  <style>
+    .cmd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0">
+
+    <a href="/" class="block px-5 py-5 border-b border-slate-800 hover:bg-slate-800/60 transition">
+      <div class="text-base font-bold tracking-tight">Cloud Cost Optimizer</div>
+      <div class="text-[11px] text-slate-400">FinOps engine</div>
+    </a>
+
+    <nav class="flex-1 px-3 py-5 flex flex-col gap-6 overflow-y-auto">
+
+      <div>
+        <div class="px-3 mb-2 text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Main</div>
+        <div class="space-y-1">
+          <a href="/"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
+                    {% if active_nav == 'home' %}bg-sky-600 text-white font-semibold shadow-sm
+                    {% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
+            <span>Dashboard</span>
+          </a>
+
+          <a href="/ingestions"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
+                    {% if active_nav == 'ingestions' %}bg-sky-600 text-white font-semibold shadow-sm
+                    {% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+            <span>Ingestions</span>
+          </a>
+
+          <a href="/inventory"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
+                    {% if active_nav == 'inventory' %}bg-sky-600 text-white font-semibold shadow-sm
+                    {% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg>
+            <span>Inventory</span>
+          </a>
+
+          <a href="/released"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
+                    {% if active_nav == 'released' %}bg-sky-600 text-white font-semibold shadow-sm
+                    {% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+            <span>Resources Released</span>
+          </a>
+
+          <a href="/rules"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition
+                    {% if active_nav == 'rules' %}bg-sky-600 text-white font-semibold shadow-sm
+                    {% else %}text-slate-300 hover:bg-slate-800 hover:text-white{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+            <span>Rules</span>
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <div class="px-3 mb-2 text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Developer</div>
+        <div class="space-y-1">
+          <a href="/docs"
+             class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"/></svg>
+            <span>API docs</span>
+          </a>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="px-4 py-3 border-t border-slate-800 text-[11px] text-slate-500">
+      v0.3.0 · safe-mode (generate only)
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 min-w-0">
+    <header class="bg-white border-b border-slate-200">
+      <div class="px-8 py-4 flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-semibold text-slate-900">{% block page_title %}{% endblock %}</h1>
+          <p class="text-xs text-slate-500">{% block page_subtitle %}{% endblock %}</p>
+        </div>
+        <div class="flex gap-2">{% block page_actions %}{% endblock %}</div>
+      </div>
+    </header>
+    <div class="px-8 py-6">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+
+<!-- Chat widget (FinOps assistant — Claude SDK) -->
+<button type="button" id="chat-fab" onclick="toggleChat()"
+        class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg flex items-center justify-center transition"
+        title="Ask the FinOps assistant">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75c-1.502 0-2.925-.34-4.196-.948L2.25 21.75l.948-5.554A9.704 9.704 0 0 1 2.25 12Z"/></svg>
+</button>
+
+<div id="chat-panel" class="hidden fixed bottom-24 right-6 z-40 w-96 max-w-[calc(100vw-2rem)] h-[32rem] bg-white border border-slate-200 rounded-lg shadow-2xl flex flex-col">
+  <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+    <div>
+      <div class="text-sm font-semibold">FinOps assistant</div>
+      <div class="text-[11px] text-slate-500">Claude Opus 4.7 · read-only · your data only</div>
+    </div>
+    <button onclick="toggleChat()" class="text-slate-400 hover:text-slate-700">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
+    <div class="text-xs text-slate-500 italic">
+      Try: <em>"what's my biggest waste in AWS?"</em>, <em>"which resources are inferred from billing only?"</em>, or <em>"explain the idle_ec2 rule"</em>.
+    </div>
+  </div>
+  <form id="chat-form" onsubmit="sendChat(event)" class="px-3 py-2 border-t border-slate-200 flex gap-2">
+    <input type="text" id="chat-input" required placeholder="Ask about your inventory…"
+           autocomplete="off"
+           class="flex-1 text-sm border border-slate-300 rounded px-3 py-1.5" />
+    <button class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded font-medium">Send</button>
+  </form>
+</div>
+
+<script>
+  const chatHistory = [];
+  function toggleChat() {
+    const p = document.getElementById('chat-panel');
+    p.classList.toggle('hidden');
+    if (!p.classList.contains('hidden')) document.getElementById('chat-input').focus();
+  }
+  function appendMsg(role, html) {
+    const wrap = document.createElement('div');
+    wrap.className = role === 'user'
+      ? 'flex justify-end'
+      : 'flex justify-start';
+    const bubble = document.createElement('div');
+    bubble.className = role === 'user'
+      ? 'bg-sky-600 text-white px-3 py-2 rounded-lg max-w-[85%] whitespace-pre-wrap break-words'
+      : 'bg-slate-100 text-slate-900 px-3 py-2 rounded-lg max-w-[85%] whitespace-pre-wrap break-words';
+    bubble.innerHTML = html;
+    wrap.appendChild(bubble);
+    document.getElementById('chat-messages').appendChild(wrap);
+    document.getElementById('chat-messages').scrollTop = 9e9;
+    return bubble;
+  }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  async function sendChat(ev) {
+    ev.preventDefault();
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendMsg('user', escapeHtml(text));
+    chatHistory.push({role: 'user', content: text});
+    const thinking = appendMsg('assistant', '<span class="text-slate-500 italic">thinking…</span>');
+    try {
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: text, history: chatHistory.slice(0, -1)}),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        thinking.innerHTML = '<span class="text-rose-600">' + escapeHtml(data.detail || 'request failed') + '</span>';
+        return;
+      }
+      thinking.innerHTML = escapeHtml(data.response);
+      chatHistory.push({role: 'assistant', content: data.response});
+    } catch (err) {
+      thinking.innerHTML = '<span class="text-rose-600">' + escapeHtml(String(err)) + '</span>';
+    }
+  }
+  // Hide FAB when API key isn't configured server-side.
+  fetch('/api/chat/status').then(r => r.json()).then(s => {
+    if (!s.enabled) {
+      const fab = document.getElementById('chat-fab');
+      fab.title = 'Set ANTHROPIC_API_KEY to enable the assistant';
+      fab.classList.add('opacity-50');
+    }
+  }).catch(() => {});
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

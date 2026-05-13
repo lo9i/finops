@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_pill, severity_pill, provider_pill, rule_chip %}
+
+{% block title %}{{ r.resource_id }} · Resource detail{% endblock %}
+{% block page_title %}{{ r.resource_id }}{% endblock %}
+{% block page_subtitle %}{{ r.resource_type }} · {{ r.region or '—' }} · {{ r.provider|upper }}{% endblock %}
+
+{% block page_actions %}
+<a href="javascript:history.back()" class="text-sm text-slate-600 hover:text-slate-900">← Back</a>
+{% endblock %}
+
+{% block content %}
+
+{% if r.released %}
+<section class="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+  <div class="flex items-start gap-3">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-emerald-600 shrink-0 mt-0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+    <div class="flex-1">
+      <h3 class="text-sm font-semibold text-emerald-900">
+        Marked as released{% if r.released|length > 1 %} ({{ r.released|length }} entries){% endif %}
+      </h3>
+      <ul class="text-sm text-emerald-900 mt-1 space-y-1">
+      {% for rel in r.released %}
+        <li class="flex flex-wrap items-center gap-2">
+          <strong>{{ rel.released_at[:10] }}</strong> ·
+          {{ rule_chip(rel.detector) }} ·
+          <span>saved <span class="font-mono">${{ "%.2f"|format(rel.monthly_cost_saved) }}/mo</span></span>
+        </li>
+      {% endfor %}
+      </ul>
+      <p class="text-xs text-emerald-700 mt-2">
+        The cloud-reported state below was captured at the last ingest — re-ingest your inventory after running the
+        remediation command to refresh it. To re-open this finding, undo the release on the
+        <a href="/released" class="underline">Resources Released</a> page.
+      </p>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Source</p>
+    {% if r.is_inferred %}
+      <p class="text-sm font-semibold mt-1 text-amber-700">Inferred from billing</p>
+      <p class="text-[11px] text-slate-500 mt-1">No inventory upload has confirmed this resource yet.</p>
+    {% else %}
+      <p class="text-sm font-semibold mt-1 text-emerald-700">Inventory (authoritative)</p>
+    {% endif %}
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">State at last ingest</p>
+    <p class="text-sm font-medium mt-1 font-mono">{{ r.state or '—' }}</p>
+    {% if r.released %}
+    <p class="text-[11px] text-slate-500 mt-1">Refreshes on next inventory ingest.</p>
+    {% endif %}
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">First seen</p>
+    <p class="text-sm mt-1">{{ r.first_seen_at or '—' }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Last seen</p>
+    <p class="text-sm mt-1">{{ r.last_seen_at or '—' }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Total billed</p>
+    <p class="text-base font-bold mt-1 font-mono">${{ "%.2f"|format(r.total_cost) }}</p>
+    <p class="text-[11px] text-slate-500">over {{ r.billing_rows_count }} line item(s)</p>
+  </div>
+</section>
+
+<section class="bg-white rounded-lg border border-slate-200 p-5 mb-6">
+  <h2 class="text-sm font-semibold mb-1">Cost over time</h2>
+  <p class="text-xs text-slate-500 mb-4">Daily sum across all billing line items for this resource.</p>
+  <div style="height: 280px;"><canvas id="costChart"></canvas></div>
+  <p id="no-data" class="hidden text-sm text-slate-500 text-center py-12">No billing data ingested yet for this resource.</p>
+</section>
+
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white rounded-lg border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold mb-3">Cost by usage type</h2>
+    <ul id="usage-breakdown" class="text-sm divide-y divide-slate-100">
+      <li class="py-2 text-slate-500">Loading…</li>
+    </ul>
+  </div>
+
+  <div class="bg-white rounded-lg border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold mb-3">Inventory metrics</h2>
+    <dl class="text-sm space-y-1">
+      <div class="flex justify-between"><dt class="text-slate-500">CPU 7d avg</dt><dd class="font-mono">{{ r.cpu_avg_7d if r.cpu_avg_7d is not none else '—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Network 7d avg</dt><dd class="font-mono">{{ r.net_avg_7d if r.net_avg_7d is not none else '—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Requests 7d avg</dt><dd class="font-mono">{{ r.request_avg_7d if r.request_avg_7d is not none else '—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Attachments</dt><dd class="font-mono text-xs">{{ r.attachments or '—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-slate-500">Tags</dt><dd class="font-mono text-xs">{{ r.tags or '—' }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+{% if r.findings %}
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">Open findings</h2>
+  </div>
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">Severity</th>
+        <th class="px-4 py-2 text-left">Rule</th>
+        <th class="px-4 py-2 text-right">Monthly $</th>
+        <th class="px-4 py-2 text-left">Reason</th>
+        <th class="px-4 py-2 text-right">Action</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for f in r.findings %}
+      <tr>
+        <td class="px-4 py-2">{{ severity_pill(f.severity) }}</td>
+        <td class="px-4 py-2">{{ rule_chip(f.detector) }}</td>
+        <td class="px-4 py-2 text-right font-mono">${{ "%.2f"|format(f.monthly_cost_estimate) }}</td>
+        <td class="px-4 py-2 text-xs italic text-slate-600">{{ f.reason }}</td>
+        <td class="px-4 py-2 text-right">
+          <button hx-post="/api/findings/{{ f.id }}/release" hx-swap="none"
+                  hx-confirm="Mark this finding as released?&#10;&#10;Resource: {{ r.resource_id }}&#10;Rule: {{ f.detector }}&#10;Monthly cost: ${{ '%.2f'|format(f.monthly_cost_estimate) }}&#10;&#10;Make sure you've already applied the remediation command."
+                  hx-on::after-request="location.reload()"
+                  class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-medium whitespace-nowrap">
+            Mark released
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if r.released %}
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">Release history</h2>
+  </div>
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">When</th>
+        <th class="px-4 py-2 text-left">Rule</th>
+        <th class="px-4 py-2 text-right">Saved /mo</th>
+        <th class="px-4 py-2 text-left">Command applied</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for rel in r.released %}
+      <tr>
+        <td class="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">{{ rel.released_at }}</td>
+        <td class="px-4 py-2">{{ rule_chip(rel.detector) }}</td>
+        <td class="px-4 py-2 text-right font-mono text-emerald-700">${{ "%.2f"|format(rel.monthly_cost_saved) }}</td>
+        <td class="px-4 py-2">
+          <code class="cmd bg-slate-900 text-emerald-300 text-xs px-2 py-1 rounded block whitespace-pre-wrap break-all">{{ rel.remediation_command }}</code>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">Ingestions that mentioned this resource</h2>
+  </div>
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">When</th>
+        <th class="px-4 py-2 text-left">File</th>
+        <th class="px-4 py-2 text-left">Kind</th>
+        <th class="px-4 py-2 text-left">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for ing in r.ingestions %}
+      <tr>
+        <td class="px-4 py-2 text-xs text-slate-500">{{ ing.uploaded_at }}</td>
+        <td class="px-4 py-2"><a href="/ingestions/{{ ing.id }}" class="text-sky-700 hover:underline">{{ ing.filename }}</a></td>
+        <td class="px-4 py-2 text-xs uppercase">{{ ing.kind }}</td>
+        <td class="px-4 py-2">{{ status_pill(ing.status, ing.processing_state) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="px-4 py-4 text-center text-slate-500 text-sm">No ingestion provenance recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(async function () {
+  const resourceId = {{ r.resource_id | tojson }};
+  const url = '/api/resources/' + encodeURIComponent(resourceId) + '/billing-history';
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    document.getElementById('costChart').style.display = 'none';
+    document.getElementById('no-data').classList.remove('hidden');
+    return;
+  }
+  const data = await resp.json();
+
+  // Cost breakdown by usage_type
+  const ul = document.getElementById('usage-breakdown');
+  ul.innerHTML = '';
+  const entries = Object.entries(data.by_usage_type || {}).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    ul.innerHTML = '<li class="py-2 text-slate-500">No billing rows for this resource.</li>';
+  } else {
+    for (const [k, v] of entries) {
+      const li = document.createElement('li');
+      li.className = 'flex justify-between py-2';
+      li.innerHTML = `<span class="font-mono text-xs">${k}</span><span class="font-mono">$${v.toFixed(4)}</span>`;
+      ul.appendChild(li);
+    }
+  }
+
+  if (!data.points || data.points.length === 0) {
+    document.getElementById('costChart').style.display = 'none';
+    document.getElementById('no-data').classList.remove('hidden');
+    return;
+  }
+  const ctx = document.getElementById('costChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.points.map(p => p.date),
+      datasets: [{
+        label: 'USD',
+        data: data.points.map(p => p.cost),
+        borderColor: '#0ea5e9',
+        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+        tension: 0.2,
+        fill: true,
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v } } }
+    }
+  });
+})();
+</script>
+{% endblock %}

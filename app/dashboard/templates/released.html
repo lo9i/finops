@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import provider_pill %}
+
+{% block title %}Resources Released · Cloud Cost Optimizer{% endblock %}
+{% block page_title %}Resources Released{% endblock %}
+{% block page_subtitle %}Findings you've marked as fixed. Each row records the command that was applied and the monthly cost recovered.{% endblock %}
+
+{% block page_actions %}
+<a href="/api/export/released.csv" class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded">↓ CSV</a>
+{% endblock %}
+
+{% block content %}
+
+<section class="grid grid-cols-2 gap-4 mb-6 max-w-xl">
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Total monthly saved</p>
+    <p class="text-2xl font-bold text-emerald-600 mt-1">${{ "%.2f"|format(total_monthly_saved) }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Resources released</p>
+    <p class="text-2xl font-bold mt-1">{{ count }}</p>
+  </div>
+</section>
+
+<section class="bg-white rounded-lg border border-slate-200">
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">Released</th>
+        <th class="px-4 py-2 text-left">Provider</th>
+        <th class="px-4 py-2 text-left">Resource</th>
+        <th class="px-4 py-2 text-left">Detector</th>
+        <th class="px-4 py-2 text-right">Saved /mo</th>
+        <th class="px-4 py-2 text-left">Command applied</th>
+        <th class="px-4 py-2 text-right">Undo</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for r in released %}
+      <tr>
+        <td class="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">{{ r.released_at }}</td>
+        <td class="px-4 py-2">{{ provider_pill(r.provider) }}</td>
+        <td class="px-4 py-2">
+          <div class="font-medium text-sm">{{ r.resource_id }}</div>
+          <div class="text-xs text-slate-500">{{ r.resource_type }} · {{ r.region or '—' }}</div>
+        </td>
+        <td class="px-4 py-2 text-xs">{{ r.detector }}</td>
+        <td class="px-4 py-2 text-right font-mono text-emerald-700">${{ "%.2f"|format(r.monthly_cost_saved) }}</td>
+        <td class="px-4 py-2">
+          <code class="cmd bg-slate-900 text-emerald-300 text-xs px-2 py-1 rounded block whitespace-pre-wrap break-all">{{ r.remediation_command }}</code>
+          {% if r.note %}<p class="text-xs text-slate-500 mt-1">{{ r.note }}</p>{% endif %}
+        </td>
+        <td class="px-4 py-2 text-right">
+          <button hx-delete="/api/released/{{ r.id }}" hx-swap="none" hx-on::after-request="location.reload()"
+                  hx-confirm="Re-open this finding on next detection run?"
+                  class="text-xs text-slate-500 hover:text-rose-600">undo</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="px-4 py-10 text-center text-slate-500">
+        Nothing released yet. Use the "Mark released" button on the
+        <a href="/" class="text-sky-600 hover:underline">Overview</a> to track fixes.
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

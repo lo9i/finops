@@ -1,0 +1,33 @@
+{
+  "resources": [
+    {
+      "resource_id": "vol-warns-001",
+      "provider": "aws",
+      "resource_type": "EBS_VOLUME",
+      "region": "us-east-1",
+      "state": "available",
+      "attachments": []
+    },
+    {
+      "provider": "aws",
+      "resource_type": "EBS_VOLUME",
+      "region": "us-east-1",
+      "state": "available"
+    },
+    {
+      "resource_id": "vm-gcp-1",
+      "provider": "gcp",
+      "resource_type": "GCE_INSTANCE",
+      "region": "us-central1",
+      "state": "running"
+    },
+    {
+      "resource_id": "disk-warns-002",
+      "provider": "azure",
+      "resource_type": "AZURE_DISK",
+      "region": "eastus",
+      "state": "Unattached",
+      "resource_group": "rg-demo"
+    }
+  ]
+}

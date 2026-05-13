@@ -1,0 +1,90 @@
+{# Shared template helpers #}
+
+{% macro status_pill(status, processing_state=None) -%}
+{% if processing_state and processing_state != 'done' %}
+<span class="px-2 py-0.5 rounded text-xs bg-sky-100 text-sky-700 font-medium inline-flex items-center gap-1">
+  <span class="w-1.5 h-1.5 rounded-full bg-sky-600 animate-pulse"></span>
+  {{ processing_state|upper }}
+</span>
+{% elif status == 'success' %}
+<span class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700 font-medium">SUCCESS</span>
+{% elif status == 'partial' %}
+<span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 font-medium">PARTIAL</span>
+{% elif status == 'failed' %}
+<span class="px-2 py-0.5 rounded text-xs bg-rose-100 text-rose-700 font-medium">FAILED</span>
+{% else %}
+<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium">{{ status|upper }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro severity_pill(sev) -%}
+{% if sev == 'high' %}
+<span class="px-2 py-0.5 rounded text-xs bg-rose-100 text-rose-700 font-medium">HIGH</span>
+{% elif sev == 'medium' %}
+<span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 font-medium">MED</span>
+{% else %}
+<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 font-medium">LOW</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro provider_pill(provider) -%}
+{% if provider == 'aws' %}
+<span class="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 font-medium uppercase">aws</span>
+{% elif provider == 'azure' %}
+<span class="px-2 py-0.5 rounded text-xs bg-sky-100 text-sky-700 font-medium uppercase">azure</span>
+{% else %}
+<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 font-medium uppercase">{{ provider }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro rule_chip(detector) -%}
+<a href="/rules#{{ detector }}"
+   class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium font-mono"
+   title="View rule definition">{{ detector }}</a>
+{%- endmacro %}
+
+{% macro requires_pill(source) -%}
+{% if source == 'billing' %}
+<span class="px-2 py-0.5 rounded text-xs bg-teal-100 text-teal-800 font-medium font-mono">billing</span>
+{% elif source == 'inventory' %}
+<span class="px-2 py-0.5 rounded text-xs bg-violet-100 text-violet-800 font-medium font-mono">inventory</span>
+{% else %}
+<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700 font-medium font-mono">{{ source }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro resource_link(resource_id) -%}
+<a href="/resources/{{ resource_id | urlencode }}" class="text-sky-700 hover:underline font-mono break-all">{{ resource_id }}</a>
+{%- endmacro %}
+
+{% macro finding_row(f, show_release=True) -%}
+<tr class="hover:bg-slate-50">
+  <td class="px-4 py-3">{{ severity_pill(f.severity) }}</td>
+  <td class="px-4 py-3">{{ provider_pill(f.resource.provider) }}</td>
+  <td class="px-4 py-3">
+    <div class="text-sm">{{ resource_link(f.resource.id) }}</div>
+    <div class="text-xs text-slate-500">{{ f.resource.type }} · {{ f.resource.region }}</div>
+  </td>
+  <td class="px-4 py-3">{{ rule_chip(f.detector) }}</td>
+  <td class="px-4 py-3 text-right font-mono text-sm">${{ "%.2f"|format(f.monthly_cost_estimate) }}</td>
+  <td class="px-4 py-3">
+    <div class="flex items-start gap-2">
+      <code class="cmd bg-slate-900 text-emerald-300 text-xs px-2 py-1 rounded block flex-1 whitespace-pre-wrap break-all">{{ f.remediation_command }}</code>
+      <button onclick="navigator.clipboard.writeText(this.parentNode.querySelector('code').innerText); this.innerText='Copied'; setTimeout(()=>this.innerText='Copy', 1200)"
+              class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded shrink-0">Copy</button>
+    </div>
+    {% if f.remediation_notes %}<p class="text-xs text-slate-500 mt-1">{{ f.remediation_notes }}</p>{% endif %}
+    <p class="text-xs text-slate-600 mt-1 italic">{{ f.reason }}</p>
+  </td>
+  {% if show_release %}
+  <td class="px-4 py-3 text-right">
+    <button hx-post="/api/findings/{{ f.id }}/release" hx-swap="none"
+            hx-confirm="Mark this finding as released?&#10;&#10;Resource: {{ f.resource.id }}&#10;Rule: {{ f.detector }}&#10;Monthly cost: ${{ '%.2f'|format(f.monthly_cost_estimate) }}&#10;&#10;Make sure you've already applied the remediation command."
+            hx-on::after-request="location.reload()"
+            class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-medium whitespace-nowrap">
+      Mark released
+    </button>
+  </td>
+  {% endif %}
+</tr>
+{%- endmacro %}

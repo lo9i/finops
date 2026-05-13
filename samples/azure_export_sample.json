@@ -1,0 +1,46 @@
+[
+  {
+    "ResourceId": "orphan-disk-1",
+    "SubscriptionId": "00000000-0000-0000-0000-aaaaaaaaaaaa",
+    "ServiceName": "Storage",
+    "MeterCategory": "Managed Disks",
+    "MeterSubCategory": "Premium SSD Managed Disks",
+    "UsageDateTime": "2026-05-01T00:00:00Z",
+    "PreTaxCost": 12.30,
+    "BillingCurrencyCode": "USD",
+    "ResourceLocation": "eastus"
+  },
+  {
+    "ResourceId": "healthy-disk-1",
+    "SubscriptionId": "00000000-0000-0000-0000-bbbbbbbbbbbb",
+    "ServiceName": "Storage",
+    "MeterCategory": "Managed Disks",
+    "MeterSubCategory": "Standard SSD Managed Disks",
+    "UsageDateTime": "2026-05-01T00:00:00Z",
+    "PreTaxCost": 10.00,
+    "BillingCurrencyCode": "USD",
+    "ResourceLocation": "eastus"
+  },
+  {
+    "ResourceId": "vm-idle-1",
+    "SubscriptionId": "00000000-0000-0000-0000-aaaaaaaaaaaa",
+    "ServiceName": "Virtual Machines",
+    "MeterCategory": "Virtual Machines",
+    "MeterSubCategory": "Dv3/DSv3 Series",
+    "UsageDateTime": "2026-05-01T00:00:00Z",
+    "PreTaxCost": 72.40,
+    "BillingCurrencyCode": "USD",
+    "ResourceLocation": "eastus"
+  },
+  {
+    "ResourceId": "vm-prod-1",
+    "SubscriptionId": "00000000-0000-0000-0000-bbbbbbbbbbbb",
+    "ServiceName": "Virtual Machines",
+    "MeterCategory": "Virtual Machines",
+    "MeterSubCategory": "Dv3/DSv3 Series",
+    "UsageDateTime": "2026-05-01T00:00:00Z",
+    "PreTaxCost": 94.10,
+    "BillingCurrencyCode": "USD",
+    "ResourceLocation": "eastus"
+  }
+]

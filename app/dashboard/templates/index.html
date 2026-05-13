@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% from "_macros.html" import severity_pill, provider_pill, status_pill, finding_row, rule_chip %}
+
+{% block title %}Dashboard · Cloud Cost Optimizer{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Open waste from the most recent detection run.{% endblock %}
+
+{% block page_actions %}
+<button type="button" onclick="toggleImportPanel()"
+        class="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-sm px-3 py-1.5 rounded font-medium">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+  Import file
+</button>
+<button hx-post="/api/detect/run" hx-swap="none" hx-on::after-request="location.reload()"
+        class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm px-3 py-1.5 rounded font-medium">
+  Re-run detectors
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Import panel (toggled by header button) -->
+<section id="import-panel" class="hidden mb-6 bg-white p-5 rounded-lg border border-sky-300 shadow-sm">
+  <div class="flex items-start justify-between mb-3">
+    <div>
+      <h2 class="text-sm font-semibold">Import a new file</h2>
+      <p class="text-xs text-slate-500">Each upload is validated, persisted, and automatically scanned.</p>
+    </div>
+    <button type="button" onclick="toggleImportPanel()" class="text-slate-400 hover:text-slate-700" aria-label="Close">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <form hx-post="/api/ingest/billing" hx-encoding="multipart/form-data"
+          hx-swap="innerHTML" hx-target="#ingest-billing-result"
+          hx-on::after-request="setTimeout(() => location.reload(), 800)" class="space-y-3">
+      <p class="text-sm font-medium">Billing export (AWS CUR CSV or Azure JSON)</p>
+      <input type="file" name="file" required class="block text-sm w-full" />
+      <button class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded text-sm">Upload billing</button>
+      <pre id="ingest-billing-result" class="text-xs text-slate-600"></pre>
+    </form>
+    <form hx-post="/api/ingest/inventory" hx-encoding="multipart/form-data"
+          hx-swap="innerHTML" hx-target="#ingest-inv-result"
+          hx-on::after-request="setTimeout(() => location.reload(), 800)" class="space-y-3">
+      <p class="text-sm font-medium">Resource inventory (JSON)</p>
+      <input type="file" name="file" required class="block text-sm w-full" />
+      <button class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded text-sm">Upload inventory</button>
+      <pre id="ingest-inv-result" class="text-xs text-slate-600"></pre>
+    </form>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white p-5 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500 tracking-wider">Open monthly waste</p>
+    <p class="text-3xl font-bold text-rose-600 mt-2">${{ "%.2f"|format(summary.total_monthly_waste) }}</p>
+    <p class="text-xs text-slate-500 mt-1">{{ summary.findings_count }} finding(s) waiting to be released</p>
+  </div>
+  <div class="bg-white p-5 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500 tracking-wider">Saved (released)</p>
+    <p class="text-3xl font-bold text-emerald-600 mt-2">${{ "%.2f"|format(summary.total_monthly_saved) }}/mo</p>
+    <p class="text-xs text-slate-500 mt-1">{{ summary.released_count }} resource(s) released</p>
+  </div>
+  <div class="bg-white p-5 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500 tracking-wider">Latest detection run</p>
+    {% if summary.latest_detection_run %}
+    <p class="text-sm font-medium mt-2">Run #{{ summary.latest_detection_run.id }} · {{ summary.latest_detection_run.findings_count }} findings</p>
+    <p class="text-xs text-slate-500 mt-1">{{ summary.latest_detection_run.started_at }}</p>
+    {% else %}
+    <p class="text-sm text-slate-500 mt-2">No detection has run yet.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+    <div>
+      <h2 class="text-sm font-semibold">Latest ingestions</h2>
+      <p class="text-xs text-slate-500">Last 5 uploaded files. Click to see the analysis that ran on each.</p>
+    </div>
+    <a href="/ingestions" class="text-xs text-sky-600 hover:underline">View all →</a>
+  </div>
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">When</th>
+        <th class="px-4 py-2 text-left">File</th>
+        <th class="px-4 py-2 text-left">Kind</th>
+        <th class="px-4 py-2 text-left">Provider</th>
+        <th class="px-4 py-2 text-right">Rows</th>
+        <th class="px-4 py-2 text-left">Status</th>
+        <th class="px-4 py-2 text-left">Warnings</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for ing in latest_ingestions %}
+      <tr class="hover:bg-slate-50 cursor-pointer" onclick="location.href='/ingestions/{{ ing.id }}'">
+        <td class="px-4 py-2 text-xs text-slate-500">{{ ing.uploaded_at }}</td>
+        <td class="px-4 py-2">
+          <a href="/ingestions/{{ ing.id }}" class="font-medium text-sky-700 hover:underline">{{ ing.filename }}</a>
+        </td>
+        <td class="px-4 py-2"><span class="text-xs uppercase font-medium">{{ ing.kind }}</span></td>
+        <td class="px-4 py-2">{{ provider_pill(ing.detected_provider or 'unknown') }}</td>
+        <td class="px-4 py-2 text-right">{{ ing.rows_ingested }} / {{ ing.rows_total }}</td>
+        <td class="px-4 py-2">{{ status_pill(ing.status, ing.processing_state) }}</td>
+        <td class="px-4 py-2 text-xs">{% if ing.warnings %}<span class="text-amber-700">{{ ing.warnings|length }} ⚠</span>{% else %}<span class="text-slate-400">—</span>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">
+        No ingestions yet — click <strong>Import file</strong> above.
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="bg-white rounded-lg border border-slate-200">
+  <div class="px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+    <div>
+      <h2 class="text-sm font-semibold">Wastes waiting to be released</h2>
+      <p class="text-xs text-slate-500">Open findings from the latest detector run. Tick rows to release in bulk.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="button" id="bulk-release-btn" disabled
+              onclick="bulkReleaseSelected()"
+              class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded font-medium disabled:bg-slate-300 disabled:cursor-not-allowed">
+        <span id="bulk-release-count">Release 0</span> selected
+      </button>
+      <a href="/api/export/findings.csv" class="text-xs text-slate-600 hover:underline">↓ CSV</a>
+      <a href="/api/findings" class="text-xs text-slate-500 hover:underline">JSON</a>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+        <tr>
+          <th class="px-4 py-2 text-left"><input type="checkbox" id="select-all" onchange="toggleAll(this)" /></th>
+          <th class="px-4 py-2 text-left">Severity</th>
+          <th class="px-4 py-2 text-left">Provider</th>
+          <th class="px-4 py-2 text-left">Resource</th>
+          <th class="px-4 py-2 text-left">Detector</th>
+          <th class="px-4 py-2 text-right">Monthly $</th>
+          <th class="px-4 py-2 text-left">Remediation</th>
+          <th class="px-4 py-2 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for f in findings %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3"><input type="checkbox" class="finding-cb" value="{{ f.id }}" onchange="updateBulkBtn()" /></td>
+          <td class="px-4 py-3">{{ severity_pill(f.severity) }}</td>
+          <td class="px-4 py-3">{{ provider_pill(f.resource.provider) }}</td>
+          <td class="px-4 py-3">
+            <div class="text-sm"><a href="/resources/{{ f.resource.id|urlencode }}" class="text-sky-700 hover:underline font-mono break-all">{{ f.resource.id }}</a></div>
+            <div class="text-xs text-slate-500">{{ f.resource.type }} · {{ f.resource.region }}</div>
+          </td>
+          <td class="px-4 py-3">{{ rule_chip(f.detector) }}</td>
+          <td class="px-4 py-3 text-right font-mono text-sm">${{ "%.2f"|format(f.monthly_cost_estimate) }}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-start gap-2">
+              <code class="cmd bg-slate-900 text-emerald-300 text-xs px-2 py-1 rounded block flex-1 whitespace-pre-wrap break-all">{{ f.remediation_command }}</code>
+              <button onclick="navigator.clipboard.writeText(this.parentNode.querySelector('code').innerText); this.innerText='Copied'; setTimeout(()=>this.innerText='Copy', 1200)"
+                      class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded shrink-0">Copy</button>
+            </div>
+            {% if f.remediation_notes %}<p class="text-xs text-slate-500 mt-1">{{ f.remediation_notes }}</p>{% endif %}
+            <p class="text-xs text-slate-600 mt-1 italic">{{ f.reason }}</p>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button hx-post="/api/findings/{{ f.id }}/release" hx-swap="none"
+                    hx-confirm="Mark this finding as released?&#10;&#10;Resource: {{ f.resource.id }}&#10;Rule: {{ f.detector }}&#10;Monthly cost: ${{ '%.2f'|format(f.monthly_cost_estimate) }}&#10;&#10;Make sure you've already applied the remediation command."
+                    hx-on::after-request="location.reload()"
+                    class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-medium whitespace-nowrap">
+              Mark released
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">
+          No open findings. {% if summary.ingestion_count == 0 %}Click <strong>Import file</strong> above to get started.{% else %}Everything is clean — or already released.{% endif %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleImportPanel() {
+    const el = document.getElementById('import-panel');
+    el.classList.toggle('hidden');
+    if (!el.classList.contains('hidden')) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  function updateBulkBtn() {
+    const n = document.querySelectorAll('.finding-cb:checked').length;
+    document.getElementById('bulk-release-count').textContent = 'Release ' + n;
+    document.getElementById('bulk-release-btn').disabled = n === 0;
+  }
+  function toggleAll(el) {
+    document.querySelectorAll('.finding-cb').forEach(cb => { cb.checked = el.checked; });
+    updateBulkBtn();
+  }
+  async function bulkReleaseSelected() {
+    const ids = Array.from(document.querySelectorAll('.finding-cb:checked')).map(cb => Number(cb.value));
+    if (!ids.length) return;
+    if (!confirm('Release ' + ids.length + ' finding(s)? Make sure you\'ve already applied each remediation command.')) return;
+    const resp = await fetch('/api/findings/bulk-release', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({finding_ids: ids, note: 'bulk-released from dashboard'}),
+    });
+    if (!resp.ok) { alert('Bulk release failed'); return; }
+    location.reload();
+  }
+</script>
+{% endblock %}

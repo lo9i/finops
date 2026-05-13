@@ -1,0 +1,11 @@
+identity/LineItemId,lineItem/UsageAccountId,lineItem/UsageStartDate,lineItem/UsageEndDate,lineItem/UsageType,lineItem/UnblendedCost,lineItem/CurrencyCode,lineItem/ResourceId,product/productName,product/region
+li-001,111111111111,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,EBS:VolumeUsage.gp3,12.50,USD,vol-0a1b2c3d4e5f60001,Amazon Elastic Block Store,us-east-1
+li-002,111111111111,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,EBS:VolumeUsage.gp3,8.20,USD,vol-0a1b2c3d4e5f60002,Amazon Elastic Block Store,us-east-1
+li-003,222222222222,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,EBS:VolumeUsage.gp3,15.00,USD,vol-0a1b2c3d4e5f60003,Amazon Elastic Block Store,us-east-1
+li-004,222222222222,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,BoxUsage:t3.large,62.40,USD,i-0aabbccddeeff0001,Amazon Elastic Compute Cloud,us-east-1
+li-005,222222222222,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,BoxUsage:m6i.large,84.10,USD,i-0aabbccddeeff0002,Amazon Elastic Compute Cloud,us-east-1
+li-006,111111111111,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,EBS:SnapshotUsage,5.25,USD,snap-04a5b6c7d8e9f0001,Amazon Elastic Block Store,us-east-1
+li-007,111111111111,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,EBS:SnapshotUsage,2.10,USD,snap-04a5b6c7d8e9f0002,Amazon Elastic Block Store,us-east-1
+li-008,222222222222,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,LoadBalancerUsage,23.00,USD,arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/idle-lb/abc12300abc12345,Elastic Load Balancing,us-east-1
+li-009,111111111111,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,ElasticIP:IdleAddress,3.65,USD,eipalloc-0aabb12345cccdddd,Amazon Elastic Compute Cloud,us-east-1
+li-010,222222222222,2026-05-01T00:00:00Z,2026-05-13T00:00:00Z,ElasticIP:InUseAddress,0.00,USD,eipalloc-0aabb22222ccceeee,Amazon Elastic Compute Cloud,us-east-1

@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% from "_macros.html" import provider_pill, severity_pill, rule_chip, resource_link %}
+
+{% block title %}Inventory · Cloud Cost Optimizer{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+{% block page_subtitle %}Every resource the engine has ever seen — filter, sort, and click through to detail.{% endblock %}
+
+{% block page_actions %}
+<a href="/api/export/resources.csv?include_released=true" class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded">↓ CSV</a>
+{% if show_released %}
+  <a href="?{{ {'show_released': '', 'provider': filters.provider or '', 'resource_type': filters.resource_type or '', 'source': source_filter, 'status': filters.status or '', 'q': q, 'sort': filters.sort, 'order': filters.order} | urlencode }}"
+     class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded">Hide released</a>
+{% else %}
+  <a href="?{{ {'show_released': 'true', 'provider': filters.provider or '', 'resource_type': filters.resource_type or '', 'source': source_filter, 'status': filters.status or '', 'q': q, 'sort': filters.sort, 'order': filters.order} | urlencode }}"
+     class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded">Show released ({{ released_resource_count }})</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Showing</p>
+    <p class="text-2xl font-bold mt-1">{{ count }}</p>
+    <p class="text-xs text-slate-500 mt-1">of {{ total_known }} ever ingested</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Released</p>
+    <p class="text-2xl font-bold text-emerald-600 mt-1">{{ released_resource_count }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Sort</p>
+    <p class="text-sm font-medium mt-1">{{ filters.sort }} <span class="text-slate-400">({{ filters.order }})</span></p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">View</p>
+    <p class="text-sm font-medium mt-1">{% if show_released %}<span class="text-amber-700">Including released</span>{% else %}<span class="text-slate-700">Hiding released</span>{% endif %}</p>
+  </div>
+</section>
+
+<!-- Filters -->
+<form method="GET" class="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+  {% if show_released %}<input type="hidden" name="show_released" value="true" />{% endif %}
+  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Search</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="resource id…"
+             class="w-full text-sm border border-slate-300 rounded px-2 py-1.5" />
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Provider</label>
+      <select name="provider" id="filter-provider" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5">
+        <option value="">All</option>
+        {% for p in facets.providers %}
+        <option value="{{ p }}" {% if filters.provider == p %}selected{% endif %}>{{ p|upper }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Type</label>
+      <select name="resource_type" id="filter-type" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5">
+        <option value="">All</option>
+        {% for t in facets.resource_types %}
+        <option value="{{ t }}" {% if filters.resource_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Account</label>
+      <select name="account_id" id="filter-account" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5">
+        <option value="">All</option>
+        {% for a in facets.accounts %}
+        <option value="{{ a }}" {% if filters.account_id == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Source</label>
+      <select name="source" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5">
+        <option value="">All</option>
+        <option value="inventory" {% if source_filter == 'inventory' %}selected{% endif %}>Inventory</option>
+        <option value="inferred" {% if source_filter == 'inferred' %}selected{% endif %}>Inferred</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Status</label>
+      <select name="status" class="w-full text-sm border border-slate-300 rounded px-2 py-1.5">
+        <option value="">All</option>
+        <option value="open"     {% if filters.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="clean"    {% if filters.status == 'clean' %}selected{% endif %}>Clean</option>
+        <option value="released" {% if filters.status == 'released' %}selected{% endif %}>Released</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Sort</label>
+      <div class="flex gap-1">
+        <select name="sort" class="flex-1 text-sm border border-slate-300 rounded px-2 py-1.5">
+          <option value="total_cost"     {% if filters.sort == 'total_cost' %}selected{% endif %}>Total cost</option>
+          <option value="first_seen_at"  {% if filters.sort == 'first_seen_at' %}selected{% endif %}>First seen</option>
+          <option value="last_seen_at"   {% if filters.sort == 'last_seen_at' %}selected{% endif %}>Last seen</option>
+          <option value="resource_id"    {% if filters.sort == 'resource_id' %}selected{% endif %}>Resource ID</option>
+          <option value="open_findings"  {% if filters.sort == 'open_findings' %}selected{% endif %}>Open findings</option>
+        </select>
+        <select name="order" class="text-sm border border-slate-300 rounded px-2 py-1.5">
+          <option value="desc" {% if filters.order == 'desc' %}selected{% endif %}>↓</option>
+          <option value="asc"  {% if filters.order == 'asc' %}selected{% endif %}>↑</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-2 mt-3">
+    <button type="submit" class="text-sm bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded font-medium">Apply</button>
+    <a href="/inventory{% if show_released %}?show_released=true{% endif %}" class="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 border border-slate-300 rounded">Clear</a>
+    <script>
+      // Cross-filter the Type dropdown so AWS only shows AWS types, Azure only Azure types.
+      (function() {
+        const providerTypes = {{ facets.provider_types | tojson }};
+        const allTypes = {{ facets.resource_types | tojson }};
+        const providerSel = document.getElementById('filter-provider');
+        const typeSel = document.getElementById('filter-type');
+        function rebuildTypes() {
+          const provider = providerSel.value;
+          const previous = typeSel.value;
+          const list = provider ? (providerTypes[provider] || []) : allTypes;
+          // Rebuild options, keep "All" + preserve selection if still valid.
+          typeSel.innerHTML = '<option value="">All</option>';
+          for (const t of list) {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            if (t === previous) opt.selected = true;
+            typeSel.appendChild(opt);
+          }
+        }
+        providerSel.addEventListener('change', rebuildTypes);
+        // Run once at load so a stale provider+type URL combo is normalised.
+        rebuildTypes();
+      })();
+    </script>
+    {% if filters.provider or filters.resource_type or source_filter or filters.status or q or filters.sort != 'total_cost' or filters.order != 'desc' %}
+    <span class="text-xs text-slate-500 self-center ml-2">
+      {% set active = [] %}
+      {% if q %}{% set _ = active.append('search="' ~ q ~ '"') %}{% endif %}
+      {% if filters.provider %}{% set _ = active.append('provider=' ~ filters.provider) %}{% endif %}
+      {% if filters.resource_type %}{% set _ = active.append('type=' ~ filters.resource_type) %}{% endif %}
+      {% if source_filter %}{% set _ = active.append('source=' ~ source_filter) %}{% endif %}
+      {% if filters.status %}{% set _ = active.append('status=' ~ filters.status) %}{% endif %}
+      {% if filters.sort != 'total_cost' or filters.order != 'desc' %}{% set _ = active.append('sort=' ~ filters.sort ~ ' ' ~ filters.order) %}{% endif %}
+      {{ active | join(' · ') }}
+    </span>
+    {% endif %}
+  </div>
+</form>
+
+<section class="bg-white rounded-lg border border-slate-200">
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+        <tr>
+          <th class="px-4 py-2 text-left">Resource</th>
+          <th class="px-4 py-2 text-left">Provider</th>
+          <th class="px-4 py-2 text-left">Type</th>
+          <th class="px-4 py-2 text-left">Region</th>
+          <th class="px-4 py-2 text-left">Account</th>
+          <th class="px-4 py-2 text-left">State</th>
+          <th class="px-4 py-2 text-left">Source</th>
+          <th class="px-4 py-2 text-left">First seen</th>
+          <th class="px-4 py-2 text-left">Last seen</th>
+          <th class="px-4 py-2 text-right">Total billed</th>
+          <th class="px-4 py-2 text-left">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for r in resources %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 text-xs">{{ resource_link(r.resource_id) }}</td>
+          <td class="px-4 py-2">{{ provider_pill(r.provider) }}</td>
+          <td class="px-4 py-2 text-xs">{{ r.resource_type }}</td>
+          <td class="px-4 py-2 text-xs">{{ r.region or '—' }}</td>
+          <td class="px-4 py-2 text-xs font-mono">{{ r.account_id or '—' }}</td>
+          <td class="px-4 py-2 text-xs font-mono">{{ r.state or '—' }}</td>
+          <td class="px-4 py-2 text-xs">
+            {% if r.is_inferred %}
+              <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 font-medium">inferred</span>
+            {% else %}
+              <span class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700 font-medium">inventory</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2 text-xs text-slate-500">{{ r.first_seen_at or '—' }}</td>
+          <td class="px-4 py-2 text-xs text-slate-500">{{ r.last_seen_at or '—' }}</td>
+          <td class="px-4 py-2 text-right font-mono">${{ "%.2f"|format(r.total_cost) }}</td>
+          <td class="px-4 py-2">
+            {% if r.released_count > 0 %}
+              <div class="flex flex-wrap gap-1 items-center">
+                <span class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700 font-medium" title="Last released {{ r.last_released_at }}">RELEASED</span>
+                {% for det in r.released_detectors %}{{ rule_chip(det) }}{% endfor %}
+              </div>
+            {% elif r.open_findings_count > 0 %}
+              <div class="flex flex-wrap gap-1 items-center">
+                <span class="px-2 py-0.5 rounded text-xs bg-rose-100 text-rose-700 font-medium">{{ r.open_findings_count }} OPEN</span>
+                {% for f in r.open_findings %}{{ rule_chip(f.detector) }}{% endfor %}
+              </div>
+            {% else %}
+              <span class="text-xs text-emerald-700">✓ clean</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" class="px-4 py-12 text-center text-slate-500 text-sm">
+          {% if total_known == 0 %}
+            No resources have been ingested yet. Go to the <a class="text-sky-600 hover:underline" href="/">Dashboard</a> and import a file.
+          {% else %}
+            No resources match the current filters. <a class="text-sky-600 hover:underline" href="/inventory">Clear filters</a>.
+          {% endif %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}

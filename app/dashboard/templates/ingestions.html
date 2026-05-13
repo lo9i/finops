@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_pill, provider_pill %}
+
+{% block title %}Ingestions · Cloud Cost Optimizer{% endblock %}
+{% block page_title %}Ingestions{% endblock %}
+{% block page_subtitle %}Every uploaded file, the rows it produced, validation warnings, and the detection run it triggered.{% endblock %}
+
+{% block content %}
+<section class="bg-white rounded-lg border border-slate-200">
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">When</th>
+        <th class="px-4 py-2 text-left">File</th>
+        <th class="px-4 py-2 text-left">Kind</th>
+        <th class="px-4 py-2 text-left">Format</th>
+        <th class="px-4 py-2 text-left">Provider</th>
+        <th class="px-4 py-2 text-right">Rows</th>
+        <th class="px-4 py-2 text-left">Status</th>
+        <th class="px-4 py-2 text-left">Detection</th>
+        <th class="px-4 py-2 text-left">Warnings</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for ing in ingestions %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">{{ ing.uploaded_at }}</td>
+        <td class="px-4 py-2">
+          <a href="/ingestions/{{ ing.id }}" class="font-medium text-sky-700 hover:underline">{{ ing.filename }}</a>
+        </td>
+        <td class="px-4 py-2 text-xs uppercase">{{ ing.kind }}</td>
+        <td class="px-4 py-2 text-xs text-slate-600">{{ ing.detected_format or '—' }}</td>
+        <td class="px-4 py-2">{{ provider_pill(ing.detected_provider or 'unknown') }}</td>
+        <td class="px-4 py-2 text-right text-xs">
+          <span class="font-mono">{{ ing.rows_ingested }}/{{ ing.rows_total }}</span>
+          {% if ing.rows_skipped > 0 %}<span class="text-rose-600"> ({{ ing.rows_skipped }} skipped)</span>{% endif %}
+        </td>
+        <td class="px-4 py-2">{{ status_pill(ing.status, ing.processing_state) }}</td>
+        <td class="px-4 py-2 text-xs">
+          {% if ing.latest_detection_run %}
+            <a href="/ingestions/{{ ing.id }}" class="text-slate-700">
+              {{ ing.latest_detection_run.findings_count }} findings · ${{ "%.2f"|format(ing.latest_detection_run.monthly_waste) }}/mo
+            </a>
+          {% else %}
+            <span class="text-slate-400">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-xs">
+          {% if ing.warnings %}<span class="text-amber-700">{{ ing.warnings|length }} ⚠</span>{% else %}<span class="text-slate-400">none</span>{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="px-4 py-10 text-center text-slate-500">
+        No ingestions yet. Go to <a class="text-sky-600 hover:underline" href="/">Overview</a> to upload.
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

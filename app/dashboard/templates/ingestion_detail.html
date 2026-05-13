@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_pill, provider_pill, finding_row, rule_chip, resource_link %}
+
+{% block title %}Ingestion #{{ ing.id }} · Cloud Cost Optimizer{% endblock %}
+{% block page_title %}Ingestion #{{ ing.id }}{% endblock %}
+{% block page_subtitle %}{{ ing.filename }}{% endblock %}
+
+{% block page_actions %}
+<a href="/ingestions" class="text-sm text-slate-600 hover:text-slate-900">← All ingestions</a>
+{% endblock %}
+
+{% block content %}
+
+<section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Kind</p>
+    <p class="text-base font-semibold mt-1 capitalize">{{ ing.kind }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Format</p>
+    <p class="text-sm font-medium mt-1">{{ ing.detected_format or '—' }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Provider</p>
+    <p class="text-sm mt-1">{{ provider_pill(ing.detected_provider or 'unknown') }}</p>
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Rows ingested</p>
+    <p class="text-base font-semibold mt-1 font-mono">{{ ing.rows_ingested }} / {{ ing.rows_total }}</p>
+    {% if ing.rows_skipped > 0 %}<p class="text-xs text-rose-600">{{ ing.rows_skipped }} skipped</p>{% endif %}
+  </div>
+  <div class="bg-white p-4 rounded-lg border border-slate-200">
+    <p class="text-xs uppercase text-slate-500">Status</p>
+    <p class="mt-1">{{ status_pill(ing.status, ing.processing_state) }}</p>
+    <p class="text-xs text-slate-500 mt-1">{{ ing.uploaded_at }}</p>
+  </div>
+</section>
+
+{% if ing.warnings or ing.error_message %}
+<section class="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+  <h3 class="text-sm font-semibold text-amber-900 mb-2">
+    ⚠ {{ (ing.warnings or [])|length }} warning(s){% if ing.error_message %} + parser error{% endif %}
+  </h3>
+  {% if ing.error_message %}
+  <pre class="text-xs bg-rose-100 text-rose-900 p-2 rounded mb-2 overflow-x-auto">{{ ing.error_message }}</pre>
+  {% endif %}
+  <ul class="text-sm text-amber-900 space-y-1 list-disc pl-5">
+    {% for w in ing.warnings or [] %}
+    <li>{{ w }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">Detection runs triggered by this ingestion</h2>
+  </div>
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+      <tr>
+        <th class="px-4 py-2 text-left">Run</th>
+        <th class="px-4 py-2 text-left">Started</th>
+        <th class="px-4 py-2 text-left">Finished</th>
+        <th class="px-4 py-2 text-right">Findings</th>
+        <th class="px-4 py-2 text-right">Monthly waste</th>
+        <th class="px-4 py-2 text-left">Trigger</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for r in ing.detection_runs %}
+      <tr>
+        <td class="px-4 py-2 font-mono text-xs">#{{ r.id }}</td>
+        <td class="px-4 py-2 text-xs text-slate-500">{{ r.started_at }}</td>
+        <td class="px-4 py-2 text-xs text-slate-500">{{ r.finished_at or '—' }}</td>
+        <td class="px-4 py-2 text-right">{{ r.findings_count }}</td>
+        <td class="px-4 py-2 text-right font-mono">${{ "%.2f"|format(r.monthly_waste) }}</td>
+        <td class="px-4 py-2 text-xs">{{ r.trigger }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="px-4 py-4 text-center text-slate-500 text-sm">
+        No detection runs (file failed to parse or contained no actionable data).
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% if ing.findings %}
+<section class="bg-white rounded-lg border border-slate-200 mb-6">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">Findings produced by latest run</h2>
+    <p class="text-xs text-slate-500">Click the rule name to see its definition. Use <strong>Mark released</strong> after applying the command.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+        <tr>
+          <th class="px-4 py-2 text-left">Severity</th>
+          <th class="px-4 py-2 text-left">Provider</th>
+          <th class="px-4 py-2 text-left">Resource</th>
+          <th class="px-4 py-2 text-left">Rule</th>
+          <th class="px-4 py-2 text-right">Monthly $</th>
+          <th class="px-4 py-2 text-left">Remediation</th>
+          <th class="px-4 py-2 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for f in ing.findings %}{{ finding_row(f) }}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="bg-white rounded-lg border border-slate-200">
+  <div class="px-5 py-3 border-b border-slate-200">
+    <h2 class="text-sm font-semibold">
+      {% if ing.kind == 'inventory' %}Resources from this file{% else %}Billing rows from this file{% endif %}
+    </h2>
+    <p class="text-xs text-slate-500">
+      {% if ing.kind == 'inventory' %}Up to 50 rows. Click any flagged resource to expand the rule(s) that matched.
+      {% else %}Up to 50 rows.{% endif %}
+    </p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+        {% if ing.kind == 'inventory' %}
+          <tr>
+            <th class="px-4 py-2 text-left">Resource</th>
+            <th class="px-4 py-2 text-left">Provider</th>
+            <th class="px-4 py-2 text-left">Type</th>
+            <th class="px-4 py-2 text-left">Region</th>
+            <th class="px-4 py-2 text-left">State</th>
+            <th class="px-4 py-2 text-left">Rule(s) matched</th>
+          </tr>
+        {% else %}
+          <tr>
+            <th class="px-4 py-2 text-left">Resource</th>
+            <th class="px-4 py-2 text-left">Service</th>
+            <th class="px-4 py-2 text-left">Region</th>
+            <th class="px-4 py-2 text-left">Usage start</th>
+            <th class="px-4 py-2 text-right">Cost</th>
+          </tr>
+        {% endif %}
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for s in ing.sample %}
+          {% if ing.kind == 'inventory' %}
+            {% set has_findings = s.findings and s.findings|length > 0 %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2 text-xs">
+                {% if has_findings %}
+                <button type="button" class="text-slate-400 mr-1 hover:text-slate-600"
+                        onclick="document.getElementById('findings-{{ loop.index }}').classList.toggle('hidden')"
+                        aria-label="Toggle matched rules">▶</button>
+                {% endif %}
+                {{ resource_link(s.resource_id) }}
+              </td>
+              <td class="px-4 py-2 text-xs uppercase">{{ s.provider }}</td>
+              <td class="px-4 py-2 text-xs">{{ s.type }}</td>
+              <td class="px-4 py-2 text-xs">{{ s.region }}</td>
+              <td class="px-4 py-2 text-xs">{{ s.state or '—' }}</td>
+              <td class="px-4 py-2">
+                {% if has_findings %}
+                  <div class="flex flex-wrap gap-1">
+                    {% for ff in s.findings %}{{ rule_chip(ff.detector) }}{% endfor %}
+                  </div>
+                {% else %}
+                  <span class="text-xs text-emerald-700">✓ clean</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% if has_findings %}
+            <tr id="findings-{{ loop.index }}" class="hidden bg-slate-50">
+              <td colspan="6" class="px-4 py-3">
+                <div class="text-xs uppercase font-semibold text-slate-500 mb-2 tracking-wider">Matched rules</div>
+                {% for ff in s.findings %}
+                <div class="bg-white rounded border border-slate-200 p-3 mb-2 last:mb-0">
+                  <div class="flex items-center justify-between gap-3 mb-2">
+                    <div class="flex items-center gap-2">
+                      {{ rule_chip(ff.detector) }}
+                      <span class="text-xs font-mono">${{ "%.2f"|format(ff.monthly_cost_estimate) }}/mo</span>
+                    </div>
+                    <button hx-post="/api/findings/{{ ff.id }}/release" hx-swap="none"
+                            hx-confirm="Mark this finding as released?&#10;&#10;Resource: {{ s.resource_id }}&#10;Rule: {{ ff.detector }}&#10;Monthly cost: ${{ '%.2f'|format(ff.monthly_cost_estimate) }}&#10;&#10;Make sure you've already applied the remediation command."
+                            hx-on::after-request="location.reload()"
+                            class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-medium whitespace-nowrap">
+                      Mark released
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-600 italic mb-2">{{ ff.reason }}</p>
+                  <div class="flex items-start gap-2">
+                    <code class="cmd bg-slate-900 text-emerald-300 text-xs px-2 py-1 rounded flex-1 whitespace-pre-wrap break-all">{{ ff.remediation_command }}</code>
+                    <button onclick="event.stopPropagation(); navigator.clipboard.writeText(this.parentNode.querySelector('code').innerText); this.innerText='Copied'; setTimeout(()=>this.innerText='Copy', 1200)"
+                            class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded shrink-0">Copy</button>
+                  </div>
+                </div>
+                {% endfor %}
+              </td>
+            </tr>
+            {% endif %}
+          {% else %}
+            <tr>
+              <td class="px-4 py-2 text-xs">{% if s.resource_id %}{{ resource_link(s.resource_id) }}{% else %}—{% endif %}</td>
+              <td class="px-4 py-2 text-xs">{{ s.service }}</td>
+              <td class="px-4 py-2 text-xs">{{ s.region or '—' }}</td>
+              <td class="px-4 py-2 text-xs text-slate-500">{{ s.usage_start or '—' }}</td>
+              <td class="px-4 py-2 text-right font-mono text-xs">${{ "%.4f"|format(s.cost) }}</td>
+            </tr>
+          {% endif %}
+        {% else %}
+        <tr><td colspan="6" class="px-4 py-4 text-center text-slate-500 text-sm">No rows to preview.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}
